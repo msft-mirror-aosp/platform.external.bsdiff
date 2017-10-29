@@ -5,41 +5,20 @@
 #ifndef _BSDIFF_PATCH_WRITER_INTERFACE_H_
 #define _BSDIFF_PATCH_WRITER_INTERFACE_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
-#include <cstddef>
+#include "bsdiff/control_entry.h"
 
 namespace bsdiff {
-
-struct ControlEntry {
-  ControlEntry(uint64_t diff_size,
-               uint64_t extra_size,
-               int64_t offset_increment)
-      : diff_size(diff_size),
-        extra_size(extra_size),
-        offset_increment(offset_increment) {}
-
-  // The number of bytes to copy from the source and diff stream.
-  uint64_t diff_size;
-
-  // The number of bytes to copy from the extra stream.
-  uint64_t extra_size;
-
-  // The value to add to the source pointer after patching from the diff stream.
-  int64_t offset_increment;
-
-  bool operator==(const ControlEntry& o) const {
-    return diff_size == o.diff_size && extra_size == o.extra_size &&
-           offset_increment == o.offset_increment;
-  }
-};
 
 class PatchWriterInterface {
  public:
   virtual ~PatchWriterInterface() = default;
 
-  // Initialize the patch writer.
-  virtual bool Init() = 0;
+  // Initialize the patch writer for a patch where the new file will have
+  // |new_size| bytes.
+  virtual bool Init(size_t new_size) = 0;
 
   // Write the passed |data| buffer of length |size| to the Diff or Extra
   // streams respectively. Each method can be called independently from each

@@ -37,18 +37,22 @@ bsdiff_src_files := \
     bz2_compressor.cc \
     diff_encoder.cc \
     patch_writer.cc \
+    patch_writer_factory.cc \
     split_patch_writer.cc \
     suffix_array_index.cc
 
 # "bspatch" program.
 bspatch_src_files := \
     bspatch.cc \
+    bz2_decompressor.cc \
     buffer_file.cc \
     extents.cc \
     extents_file.cc \
     file.cc \
     memory_file.cc \
-    sink_file.cc
+    patch_reader.cc \
+    sink_file.cc \
+    utils.cc
 
 # Unit test files.
 bsdiff_common_unittests := \
@@ -57,6 +61,7 @@ bsdiff_common_unittests := \
     diff_encoder_unittest.cc \
     extents_file_unittest.cc \
     extents_unittest.cc \
+    patch_reader_unittest.cc \
     patch_writer_unittest.cc \
     split_patch_writer_unittest.cc \
     suffix_array_index_unittest.cc \

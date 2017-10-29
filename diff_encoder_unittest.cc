@@ -4,6 +4,7 @@
 
 #include "bsdiff/diff_encoder.h"
 
+#include <memory>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -25,7 +26,12 @@ namespace bsdiff {
 
 class DiffEncoderTest : public testing::Test {
  protected:
-  void SetUp() { EXPECT_TRUE(fake_patch_.Init()); }
+  void SetUp() {
+    // By default, set the encoder to kHelloWorld to kHelloWorld.
+    diff_encoder_.reset(new DiffEncoder(&fake_patch_, kHelloWorld,
+                                        sizeof(kHelloWorld), kHelloWorld,
+                                        sizeof(kHelloWorld)));
+  }
 
   FakePatchWriter fake_patch_;
   std::unique_ptr<DiffEncoder> diff_encoder_;
@@ -33,6 +39,7 @@ class DiffEncoderTest : public testing::Test {
 
 TEST_F(DiffEncoderTest, CreateEmptyPatchTest) {
   diff_encoder_.reset(new DiffEncoder(&fake_patch_, nullptr, 0, nullptr, 0));
+  EXPECT_TRUE(diff_encoder_->Init());
   EXPECT_TRUE(diff_encoder_->Close());
 
   // Both diff and extra stream must be empty stream, and not control entries.
@@ -44,6 +51,7 @@ TEST_F(DiffEncoderTest, CreateEmptyPatchTest) {
 TEST_F(DiffEncoderTest, AllInExtraStreamTest) {
   diff_encoder_.reset(new DiffEncoder(&fake_patch_, nullptr, 0, kHelloWorld,
                                       sizeof(kHelloWorld)));
+  EXPECT_TRUE(diff_encoder_->Init());
 
   // Write to the extra stream in two parts: first 5 bytes, then the rest.
   EXPECT_TRUE(diff_encoder_->AddControlEntry(ControlEntry(0, 5, 0)));
@@ -59,9 +67,7 @@ TEST_F(DiffEncoderTest, AllInExtraStreamTest) {
 }
 
 TEST_F(DiffEncoderTest, AllInDiffStreamTest) {
-  diff_encoder_.reset(new DiffEncoder(&fake_patch_, kHelloWorld,
-                                      sizeof(kHelloWorld), kHelloWorld,
-                                      sizeof(kHelloWorld)));
+  EXPECT_TRUE(diff_encoder_->Init());
   EXPECT_TRUE(
       diff_encoder_->AddControlEntry(ControlEntry(sizeof(kHelloWorld), 0, 0)));
   EXPECT_TRUE(diff_encoder_->Close());
@@ -69,6 +75,42 @@ TEST_F(DiffEncoderTest, AllInDiffStreamTest) {
   EXPECT_EQ(std::vector<uint8_t>(sizeof(kHelloWorld), 0),
             fake_patch_.diff_stream());
   EXPECT_TRUE(fake_patch_.extra_stream().empty());
+}
+
+TEST_F(DiffEncoderTest, OldPosNegativeErrorTest) {
+  EXPECT_TRUE(diff_encoder_->Init());
+  // Referencing negative values in oldpos is fine, until you use them.
+  EXPECT_TRUE(diff_encoder_->AddControlEntry(ControlEntry(0, 0, -5)));
+  EXPECT_TRUE(diff_encoder_->AddControlEntry(ControlEntry(0, 0, 2)));
+  EXPECT_FALSE(diff_encoder_->AddControlEntry(ControlEntry(1, 0, 0)));
+}
+
+// Test that using an oldpos past the end of the file fails.
+TEST_F(DiffEncoderTest, OldPosTooBigErrorTest) {
+  EXPECT_TRUE(diff_encoder_->Init());
+  EXPECT_TRUE(
+      diff_encoder_->AddControlEntry(ControlEntry(0, 0, sizeof(kHelloWorld))));
+  EXPECT_FALSE(diff_encoder_->AddControlEntry(ControlEntry(1, 0, 0)));
+}
+
+// Test that diffing against a section of the old file past the end of the file
+// fails.
+TEST_F(DiffEncoderTest, OldPosPlusSizeTooBigErrorTest) {
+  EXPECT_TRUE(diff_encoder_->Init());
+  // The oldpos is set to a range inside the word, the we try to copy past the
+  // end of it.
+  EXPECT_TRUE(diff_encoder_->AddControlEntry(
+      ControlEntry(0, 0, sizeof(kHelloWorld) - 3)));
+  EXPECT_FALSE(
+      diff_encoder_->AddControlEntry(ControlEntry(sizeof(kHelloWorld), 0, 0)));
+}
+
+TEST_F(DiffEncoderTest, ExtraStreamTooBigErrorTest) {
+  EXPECT_TRUE(diff_encoder_->Init());
+  EXPECT_TRUE(diff_encoder_->AddControlEntry(ControlEntry(3, 0, 0)));
+  // This writes too many bytes in the stream because we already have 3 bytes.
+  EXPECT_FALSE(
+      diff_encoder_->AddControlEntry(ControlEntry(0, sizeof(kHelloWorld), 0)));
 }
 
 }  // namespace bsdiff

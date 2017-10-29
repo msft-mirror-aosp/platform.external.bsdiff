@@ -31,12 +31,15 @@
   'variables': {
     'bspatch_sources': [
       'bspatch.cc',
+      'bz2_decompressor.cc',
       'buffer_file.cc',
       'extents.cc',
       'extents_file.cc',
       'file.cc',
       'memory_file.cc',
+      'patch_reader.cc',
       'sink_file.cc',
+      'utils.cc',
     ],
   },
   'targets': [
@@ -56,6 +59,7 @@
         'bz2_compressor.cc',
         'diff_encoder.cc',
         'patch_writer.cc',
+        'patch_writer_factory.cc',
         'split_patch_writer.cc',
         'suffix_array_index.cc',
       ],
@@ -132,6 +136,7 @@
             'diff_encoder_unittest.cc',
             'extents_file_unittest.cc',
             'extents_unittest.cc',
+            'patch_reader_unittest.cc',
             'patch_writer_unittest.cc',
             'split_patch_writer_unittest.cc',
             'suffix_array_index_unittest.cc',
