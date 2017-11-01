@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "bspatch.h"
+#include "bsdiff/bspatch.h"
 
 #include <unistd.h>
 
 #include <gtest/gtest.h>
 
-#include "test_utils.h"
+#include "bsdiff/test_utils.h"
 
 namespace bsdiff {
 
