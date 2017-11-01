@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "extents_file.h"
+#include "bsdiff/extents_file.h"
 
 #include <string.h>
 
@@ -73,7 +73,6 @@ void ExtentsFile::AdvancePos(uint64_t size) {
     if (curr_pos_ < acc_len_[curr_ex_idx_] + extents_[curr_ex_idx_].len)
       return;
   }
-  return;
 }
 
 template <typename T>
