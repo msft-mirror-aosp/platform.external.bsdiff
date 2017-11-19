@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "bsdiff/compressor_interface.h"
+#include "bsdiff/decompressor_interface.h"
 
-#include "bsdiff/brotli_compressor.h"
-#include "bsdiff/bz2_compressor.h"
+#include "bsdiff/brotli_decompressor.h"
+#include "bsdiff/bz2_decompressor.h"
 #include "bsdiff/logging.h"
 
 namespace bsdiff {
 
-std::unique_ptr<CompressorInterface> CreateCompressor(CompressorType type) {
+std::unique_ptr<DecompressorInterface> CreateDecompressor(CompressorType type) {
   switch (type) {
     case CompressorType::kBZ2:
-      return std::unique_ptr<CompressorInterface>(new BZ2Compressor());
+      return std::unique_ptr<DecompressorInterface>(new BZ2Decompressor());
     case CompressorType::kBrotli:
-      return std::unique_ptr<CompressorInterface>(new BrotliCompressor());
+      return std::unique_ptr<DecompressorInterface>(new BrotliDecompressor());
     default:
       LOG(ERROR) << "unsupported compressor type: "
                  << static_cast<uint8_t>(type) << std::endl;
