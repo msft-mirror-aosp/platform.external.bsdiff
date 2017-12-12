@@ -39,6 +39,8 @@ bsdiff_src_files := \
     compressor_buffer.cc \
     compressor_interface.cc \
     diff_encoder.cc \
+    endsley_patch_writer.cc \
+    logging.cc \
     patch_writer.cc \
     patch_writer_factory.cc \
     split_patch_writer.cc \
@@ -46,12 +48,15 @@ bsdiff_src_files := \
 
 # "bspatch" program.
 bspatch_src_files := \
+    brotli_decompressor.cc \
     bspatch.cc \
     bz2_decompressor.cc \
     buffer_file.cc \
+    decompressor_interface.cc \
     extents.cc \
     extents_file.cc \
     file.cc \
+    logging.cc \
     memory_file.cc \
     patch_reader.cc \
     sink_file.cc \
@@ -63,6 +68,7 @@ bsdiff_common_unittests := \
     bsdiff_unittest.cc \
     bspatch_unittest.cc \
     diff_encoder_unittest.cc \
+    endsley_patch_writer_unittest.cc \
     extents_file_unittest.cc \
     extents_unittest.cc \
     patch_reader_unittest.cc \
