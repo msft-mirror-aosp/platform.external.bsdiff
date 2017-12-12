@@ -28,32 +28,22 @@
       '<(platform2_root)/../aosp/external',
     ],
   },
-  'variables': {
-    'bspatch_sources': [
-      'bspatch.cc',
-      'bz2_decompressor.cc',
-      'buffer_file.cc',
-      'extents.cc',
-      'extents_file.cc',
-      'file.cc',
-      'memory_file.cc',
-      'patch_reader.cc',
-      'sink_file.cc',
-      'utils.cc',
-    ],
-  },
   'targets': [
-    # bsdiff library
+    # bsdiff static library
     {
-      'target_name': 'libbsdiff',
-      'type': 'shared_library',
-      'link_settings': {
-        'libraries': [
-          '-lbz2',
-          '-lbrotlienc',
-          '-ldivsufsort',
-          '-ldivsufsort64',
-        ],
+      'target_name': 'libbsdiff-static',
+      'type': 'static_library',
+      'cflags!': ['-fPIE'],
+      'cflags': ['-fPIC'],
+      'all_dependent_settings': {
+        'link_settings': {
+          'libraries': [
+            '-lbz2',
+            '-lbrotlienc',
+            '-ldivsufsort',
+            '-ldivsufsort64',
+          ],
+        },
       },
       'sources': [
         'brotli_compressor.cc',
@@ -62,10 +52,20 @@
         'compressor_buffer.cc',
         'compressor_interface.cc',
         'diff_encoder.cc',
+        'endsley_patch_writer.cc',
+        'logging.cc',
         'patch_writer.cc',
         'patch_writer_factory.cc',
         'split_patch_writer.cc',
         'suffix_array_index.cc',
+      ],
+    },
+    # bsdiff shared library
+    {
+      'target_name': 'libbsdiff',
+      'type': 'shared_library',
+      'dependencies': [
+        'libbsdiff-static',
       ],
     },
     # bsdiff executable
@@ -79,18 +79,42 @@
         'bsdiff_main.cc',
       ],
     },
-    # bspatch library
+    # bspatch static library
+    {
+      'target_name': 'libbspatch-static',
+      'type': 'static_library',
+      'cflags!': ['-fPIE'],
+      'cflags': ['-fPIC'],
+      'all_dependent_settings': {
+        'link_settings': {
+          'libraries': [
+            '-lbz2',
+            '-lbrotlidec',
+          ],
+        },
+      },
+      'sources': [
+        'brotli_decompressor.cc',
+        'bspatch.cc',
+        'buffer_file.cc',
+        'bz2_decompressor.cc',
+        'decompressor_interface.cc',
+        'extents.cc',
+        'extents_file.cc',
+        'file.cc',
+        'logging.cc',
+        'memory_file.cc',
+        'patch_reader.cc',
+        'sink_file.cc',
+        'utils.cc',
+      ],
+    },
+    # bspatch shared library
     {
       'target_name': 'libbspatch',
       'type': 'shared_library',
-      'link_settings': {
-        'libraries': [
-          '-lbz2',
-          '-lbrotlidec',
-        ],
-      },
-      'sources': [
-        '<@(bspatch_sources)',
+      'dependencies': [
+        'libbspatch-static',
       ],
     },
     # bspatch executable
@@ -108,25 +132,12 @@
   'conditions': [
     ['USE_test == 1', {
       'targets': [
-        # bspatch static library for test
-        {
-          'target_name': 'libbspatch_test',
-          'type': 'static_library',
-          'link_settings': {
-            'libraries': [
-              '-lbz2',
-            ],
-          },
-          'sources': [
-            '<@(bspatch_sources)',
-          ],
-        },
         {
           'target_name': 'bsdiff_unittest',
           'type': 'executable',
           'dependencies': [
-            'libbsdiff',
-            'libbspatch_test',
+            'libbsdiff-static',
+            'libbspatch-static',
             '../common-mk/testrunner.gyp:testrunner',
           ],
           'variables': {
@@ -140,6 +151,7 @@
             'bsdiff_unittest.cc',
             'bspatch_unittest.cc',
             'diff_encoder_unittest.cc',
+            'endsley_patch_writer_unittest.cc',
             'extents_file_unittest.cc',
             'extents_unittest.cc',
             'patch_reader_unittest.cc',

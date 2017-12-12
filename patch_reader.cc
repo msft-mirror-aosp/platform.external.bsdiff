@@ -8,20 +8,18 @@
 
 #include <limits>
 
+#include "bsdiff/brotli_decompressor.h"
 #include "bsdiff/bspatch.h"
 #include "bsdiff/bz2_decompressor.h"
+#include "bsdiff/constants.h"
 #include "bsdiff/logging.h"
 #include "bsdiff/utils.h"
 
-using std::endl;
-
 namespace bsdiff {
 
-const uint8_t kMagicHeader[] = "BSDIFF40";
-
 bool BsdiffPatchReader::Init(const uint8_t* patch_data, size_t patch_size) {
-  // File format:
-  //   0       8    "BSDIFF40"
+  //   File format:
+  //   0       8    magic header
   //   8       8    X
   //   16      8    Y
   //   24      8    new_file_size
@@ -32,9 +30,39 @@ bool BsdiffPatchReader::Init(const uint8_t* patch_data, size_t patch_size) {
   // from oldfile to x bytes from the diff block; copy y bytes from the
   // extra block; seek forwards in oldfile by z bytes".
 
+  if (patch_size < 32) {
+    LOG(ERROR) << "Too small to be a bspatch.";
+    return false;
+  }
   // Check for appropriate magic.
-  if (memcmp(patch_data, kMagicHeader, 8) != 0) {
-    LOG(ERROR) << "Not a bsdiff patch." << endl;
+  std::vector<CompressorType> compression_type;
+  if (memcmp(patch_data, kLegacyMagicHeader, 8) == 0) {
+    // The magic header is "BSDIFF40" for legacy format.
+    compression_type = {CompressorType::kBZ2, CompressorType::kBZ2,
+                        CompressorType::kBZ2};
+  } else if (memcmp(patch_data, kBSDF2MagicHeader, 5) == 0) {
+    // The magic header for BSDF2 format:
+    // 0 5 BSDF2
+    // 5 1 compressed type for control stream
+    // 6 1 compressed type for diff stream
+    // 7 1 compressed type for extra stream
+    for (size_t i = 5; i < 8; i++) {
+      uint8_t type = patch_data[i];
+      switch (type) {
+        case static_cast<uint8_t>(CompressorType::kBZ2):
+          compression_type.push_back(CompressorType::kBZ2);
+          break;
+        case static_cast<uint8_t>(CompressorType::kBrotli):
+          compression_type.push_back(CompressorType::kBrotli);
+          break;
+        default:
+          LOG(ERROR) << "Unsupported compression type: "
+                     << static_cast<int>(type);
+          return false;
+      }
+    }
+  } else {
+    LOG(ERROR) << "Not a bsdiff patch.";
     return false;
   }
 
@@ -52,23 +80,25 @@ bool BsdiffPatchReader::Init(const uint8_t* patch_data, size_t patch_size) {
   }
   new_file_size_ = signed_newsize;
 
-  // TODO(xunchang) set the correct decompressor based on the info in the
-  // header.
-  ctrl_stream_.reset(new BZ2Decompressor());
-  diff_stream_.reset(new BZ2Decompressor());
-  extra_stream_.reset(new BZ2Decompressor());
+  ctrl_stream_ = CreateDecompressor(compression_type[0]);
+  diff_stream_ = CreateDecompressor(compression_type[1]);
+  extra_stream_ = CreateDecompressor(compression_type[2]);
+  if (!(ctrl_stream_ && diff_stream_ && extra_stream_)) {
+    LOG(ERROR) << "uninitialized decompressor stream";
+    return false;
+  }
 
-  int64_t offset = 32;
+  size_t offset = 32;
   if (!ctrl_stream_->SetInputData(const_cast<uint8_t*>(patch_data) + offset,
                                   ctrl_len)) {
-    LOG(ERROR) << "Failed to init ctrl stream, ctrl_len: " << ctrl_len << endl;
+    LOG(ERROR) << "Failed to init ctrl stream, ctrl_len: " << ctrl_len;
     return false;
   }
 
   offset += ctrl_len;
   if (!diff_stream_->SetInputData(const_cast<uint8_t*>(patch_data) + offset,
                                   diff_len)) {
-    LOG(ERROR) << "Failed to init ctrl stream, diff_len: " << diff_len << endl;
+    LOG(ERROR) << "Failed to init ctrl stream, diff_len: " << diff_len;
     return false;
   }
 
@@ -76,7 +106,7 @@ bool BsdiffPatchReader::Init(const uint8_t* patch_data, size_t patch_size) {
   if (!extra_stream_->SetInputData(const_cast<uint8_t*>(patch_data) + offset,
                                    patch_size - offset)) {
     LOG(ERROR) << "Failed to init extra stream, extra_offset: " << offset
-               << ", patch_size: " << patch_size << endl;
+               << ", patch_size: " << patch_size;
     return false;
   }
   return true;
@@ -98,7 +128,7 @@ bool BsdiffPatchReader::ParseControlEntry(ControlEntry* control_entry) {
   // Sanity check.
   if (diff_size < 0 || extra_size < 0) {
     LOG(ERROR) << "Corrupt patch; diff_size: " << diff_size
-               << ", extra_size: " << extra_size << endl;
+               << ", extra_size: " << extra_size;
     return false;
   }
 

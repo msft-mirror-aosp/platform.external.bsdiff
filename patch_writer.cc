@@ -8,14 +8,11 @@
 
 #include "bsdiff/brotli_compressor.h"
 #include "bsdiff/bz2_compressor.h"
+#include "bsdiff/constants.h"
 #include "bsdiff/control_entry.h"
 #include "bsdiff/logging.h"
 
-using std::endl;
-
 namespace {
-
-constexpr uint8_t kMagicHeader[] = "BSDIFF40";
 
 void EncodeInt64(int64_t x, uint8_t* buf) {
   uint64_t y = x < 0 ? (1ULL << 63ULL) - x : x;
@@ -30,17 +27,30 @@ void EncodeInt64(int64_t x, uint8_t* buf) {
 namespace bsdiff {
 
 BsdiffPatchWriter::BsdiffPatchWriter(const std::string& patch_filename,
-                                     CompressorType type)
-    : patch_filename_(patch_filename) {
-  ctrl_stream_ = CreateCompressor(type);
-  diff_stream_ = CreateCompressor(type);
-  extra_stream_ = CreateCompressor(type);
+                                     BsdiffFormat format)
+    : patch_filename_(patch_filename), format_(format) {
+  if (format_ == BsdiffFormat::kLegacy) {
+    ctrl_stream_ = CreateCompressor(CompressorType::kBZ2);
+    diff_stream_ = CreateCompressor(CompressorType::kBZ2);
+    extra_stream_ = CreateCompressor(CompressorType::kBZ2);
+  } else {
+    // TODO(xunchang) set different compression method according to the
+    // compressed size for these streams.
+    ctrl_stream_ = CreateCompressor(CompressorType::kBrotli);
+    diff_stream_ = CreateCompressor(CompressorType::kBrotli);
+    extra_stream_ = CreateCompressor(CompressorType::kBrotli);
+  }
 }
 
 bool BsdiffPatchWriter::Init(size_t /* new_size */) {
+  if (!(ctrl_stream_ && diff_stream_ && extra_stream_)) {
+    LOG(ERROR) << "uninitialized compressor stream";
+    return false;
+  }
+
   fp_ = fopen(patch_filename_.c_str(), "w");
   if (!fp_) {
-    LOG(ERROR) << "Opening " << patch_filename_ << endl;
+    LOG(ERROR) << "Opening " << patch_filename_;
     return false;
   }
   return true;
@@ -68,13 +78,13 @@ bool BsdiffPatchWriter::AddControlEntry(const ControlEntry& entry) {
 
 bool BsdiffPatchWriter::Close() {
   if (!fp_) {
-    LOG(ERROR) << "File not open." << endl;
+    LOG(ERROR) << "File not open.";
     return false;
   }
 
   if (!ctrl_stream_->Finish() || !diff_stream_->Finish() ||
       !extra_stream_->Finish()) {
-    LOG(ERROR) << "Finalizing compressed streams." << endl;
+    LOG(ERROR) << "Finalizing compressed streams.";
     return false;
   }
 
@@ -86,20 +96,20 @@ bool BsdiffPatchWriter::Close() {
     return false;
 
   if (fwrite(ctrl_data.data(), 1, ctrl_data.size(), fp_) != ctrl_data.size()) {
-    LOG(ERROR) << "Writing ctrl_data." << endl;
+    LOG(ERROR) << "Writing ctrl_data.";
     return false;
   }
   if (fwrite(diff_data.data(), 1, diff_data.size(), fp_) != diff_data.size()) {
-    LOG(ERROR) << "Writing diff_data." << endl;
+    LOG(ERROR) << "Writing diff_data.";
     return false;
   }
   if (fwrite(extra_data.data(), 1, extra_data.size(), fp_) !=
       extra_data.size()) {
-    LOG(ERROR) << "Writing extra_data." << endl;
+    LOG(ERROR) << "Writing extra_data.";
     return false;
   }
   if (fclose(fp_) != 0) {
-    LOG(ERROR) << "Closing the patch file." << endl;
+    LOG(ERROR) << "Closing the patch file.";
     return false;
   }
   fp_ = nullptr;
@@ -108,24 +118,41 @@ bool BsdiffPatchWriter::Close() {
 
 bool BsdiffPatchWriter::WriteHeader(uint64_t ctrl_size, uint64_t diff_size) {
   /* Header format is
-   * 0 8  "BSDIFF40"
-   * 8 8 length of bzip2ed ctrl block
-   * 16  8 length of bzip2ed diff block
+   * 0 8 magic header
+   * 8 8 length of compressed ctrl block
+   * 16  8 length of compressed diff block
    * 24  8 length of new file
    *
    * File format is
    * 0 32  Header
-   * 32  ??  Bzip2ed ctrl block
-   * ??  ??  Bzip2ed diff block
-   * ??  ??  Bzip2ed extra block
+   * 32  ??  compressed ctrl block
+   * ??  ??  compressed diff block
+   * ??  ??  compressed extra block
    */
   uint8_t header[32];
-  memcpy(header, kMagicHeader, 8);
+  if (format_ == BsdiffFormat::kLegacy) {
+    // The magic header is "BSDIFF40" for legacy format.
+    memcpy(header, kLegacyMagicHeader, 8);
+  } else if (format_ == BsdiffFormat::kBsdf2) {
+    // The magic header for BSDF2 format:
+    // 0 5 BSDF2
+    // 5 1 compressed type for control stream
+    // 6 1 compressed type for diff stream
+    // 7 1 compressed type for extra stream
+    memcpy(header, kBSDF2MagicHeader, 5);
+    header[5] = static_cast<uint8_t>(ctrl_stream_->Type());
+    header[6] = static_cast<uint8_t>(diff_stream_->Type());
+    header[7] = static_cast<uint8_t>(extra_stream_->Type());
+  } else {
+    LOG(ERROR) << "Unsupported bsdiff format.";
+    return false;
+  }
+
   EncodeInt64(ctrl_size, header + 8);
   EncodeInt64(diff_size, header + 16);
   EncodeInt64(written_output_, header + 24);
   if (fwrite(header, sizeof(header), 1, fp_) != 1) {
-    LOG(ERROR) << "writing to the patch file" << endl;
+    LOG(ERROR) << "writing to the patch file";
     return false;
   }
   return true;

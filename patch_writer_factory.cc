@@ -4,15 +4,21 @@
 
 #include "bsdiff/patch_writer_factory.h"
 
+#include "bsdiff/endsley_patch_writer.h"
 #include "bsdiff/patch_writer.h"
 
 namespace bsdiff {
 
-// TODO(xunchang) choose the compression type based on the input parameter.
+// TODO(xunchang) choose the bsdiff format based on the input parameter.
 std::unique_ptr<PatchWriterInterface> CreateBsdiffPatchWriter(
     const std::string& patch_filename) {
   return std::unique_ptr<PatchWriterInterface>(
-      new BsdiffPatchWriter(patch_filename, CompressorType::kBZ2));
+      new BsdiffPatchWriter(patch_filename, BsdiffFormat::kLegacy));
+}
+
+std::unique_ptr<PatchWriterInterface> CreateEndsleyPatchWriter(
+    std::vector<uint8_t>* patch) {
+  return std::unique_ptr<PatchWriterInterface>(new EndsleyPatchWriter(patch));
 }
 
 }  // namespace bsdiff
