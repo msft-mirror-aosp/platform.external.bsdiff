@@ -19,14 +19,18 @@ namespace bsdiff {
 
 class BrotliCompressor : public CompressorInterface {
  public:
-  BrotliCompressor();
+  // Create a brotli compressor with the compression quality |quality|. As the
+  // value of quality increases, the compression becomes better but slower.
+  // The valid range of quality is between BROTLI_MIN_QUALITY and
+  // BROTLI_MAX_QUALITY; and the caller is responsible for the validity check.
+  explicit BrotliCompressor(int quality);
   ~BrotliCompressor() override;
 
   // CompressorInterface overrides.
   bool Write(const uint8_t* buf, size_t size) override;
   bool Finish() override;
   const std::vector<uint8_t>& GetCompressedData() override;
-  CompressorType Type() override { return CompressorType::kBrotli; }
+  CompressorType Type() const override { return CompressorType::kBrotli; }
 
  private:
   BrotliEncoderState* brotli_encoder_state_;
