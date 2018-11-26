@@ -61,6 +61,7 @@ bool BsdiffPatchWriter::InitializeCompressorList(
         break;
       case CompressorType::kNoCompression:
         LOG(ERROR) << "Unsupported compression type " << static_cast<int>(type);
+        return false;
     }
   }
 
