@@ -29,8 +29,7 @@ group("all") {
   }
 }
 
-pkg_config("target_defaults") {
-  pkg_deps = []
+config("target_defaults") {
   cflags = [
     "-Wextra",
     "-Wno-unused-parameter",
@@ -43,7 +42,7 @@ pkg_config("target_defaults") {
       # "bsdiff/...".
       "${platform2_root}/../aosp/external",
   ]
-  libs = [ "-lbz2" ]
+  libs = [ "bz2" ]
 }
 
 pkg_config("libbspatch_config") {
@@ -122,14 +121,10 @@ executable("bsdiff") {
 }
 
 if (use.test) {
-  pkg_config("bsdiff_test_config") {
-    pkg_deps = [ "libchrome-${libbase_ver}" ]
-  }
   executable("bsdiff_test") {
     configs += [
       "//common-mk:test",
       ":target_defaults",
-      ":bsdiff_test_config",
     ]
     deps = [
       "//common-mk/testrunner",
