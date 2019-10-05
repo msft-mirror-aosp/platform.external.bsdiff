@@ -33,6 +33,7 @@ cc_defaults {
 cc_library_static {
     name: "libbspatch",
     defaults: ["bsdiff_defaults"],
+    vendor_available: true,
     recovery_available: true,
 
     srcs: [
