@@ -75,7 +75,7 @@ bool BsdiffArguments::IsValid() const {
 
 bool BsdiffArguments::ParseCommandLine(int argc, char** argv) {
   int opt;
-  int option_index = 0;
+  int option_index;
   while ((opt = getopt_long(argc, argv, "", OPTIONS, &option_index)) != -1) {
     if (opt != 0) {
       return false;
