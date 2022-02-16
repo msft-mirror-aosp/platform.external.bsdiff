@@ -8,24 +8,23 @@
 #include <stdint.h>
 
 struct ControlEntry {
-  constexpr ControlEntry(uint64_t diff_size,
-                         uint64_t extra_size,
-                         int64_t offset_increment)
+  ControlEntry(uint64_t diff_size,
+               uint64_t extra_size,
+               int64_t offset_increment)
       : diff_size(diff_size),
         extra_size(extra_size),
         offset_increment(offset_increment) {}
-  constexpr ControlEntry() = default;
 
   // The number of bytes to copy from the source and diff stream.
-  uint64_t diff_size{0};
+  uint64_t diff_size;
 
   // The number of bytes to copy from the extra stream.
-  uint64_t extra_size{0};
+  uint64_t extra_size;
 
   // The value to add to the source pointer after patching from the diff stream.
-  int64_t offset_increment{0};
+  int64_t offset_increment;
 
-  [[nodiscard]] bool operator==(const ControlEntry& o) const {
+  bool operator==(const ControlEntry& o) const {
     return diff_size == o.diff_size && extra_size == o.extra_size &&
            offset_increment == o.offset_increment;
   }
