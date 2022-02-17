@@ -14,6 +14,15 @@
 
 namespace bsdiff {
 
+
+constexpr void EncodeInt64(int64_t x, uint8_t* buf) {
+  uint64_t y = x < 0 ? (1ULL << 63ULL) - x : x;
+  for (int i = 0; i < 8; ++i) {
+    buf[i] = y & 0xff;
+    y /= 256;
+  }
+}
+
 // A PatchWriterInterface class with three compressors and a 32-byte header.
 class BsdiffPatchWriter : public PatchWriterInterface {
  public:
