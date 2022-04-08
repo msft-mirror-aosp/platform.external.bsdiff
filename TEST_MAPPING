@@ -1,7 +1,0 @@
-{
-  "presubmit": [
-    {
-      "name": "bsdiff_unittest"
-    }
-  ]
-}
