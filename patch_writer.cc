@@ -13,10 +13,6 @@
 #include "bsdiff/control_entry.h"
 #include "bsdiff/logging.h"
 
-namespace {
-
-
-}  // namespace
 
 namespace bsdiff {
 
@@ -43,6 +39,7 @@ bool BsdiffPatchWriter::InitializeCompressorList(
     LOG(ERROR) << "Patch writer expects at least one compressor.";
     return false;
   }
+  compressor_list->clear();
 
   for (const auto& type : types_) {
     switch (type) {
