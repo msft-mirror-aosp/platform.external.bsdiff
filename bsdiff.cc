@@ -119,7 +119,7 @@ int bsdiff(const uint8_t* old_buf, size_t oldsize, const uint8_t* new_buf,
 					oldscore++;
 
 			if(((len==oldscore) && (len!=0)) ||
-				(len>oldscore+8 && len>=min_length)) break;
+				(len>=oldscore+8 && len>=min_length)) break;
 
 			if((scan+lastoffset<oldsize) &&
 				(old_buf[scan+lastoffset] == new_buf[scan]))
