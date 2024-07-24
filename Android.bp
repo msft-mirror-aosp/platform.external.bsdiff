@@ -49,6 +49,7 @@ cc_library_static {
 
     visibility: [
         "//bootable/recovery:__subpackages__",
+        "//bootable/deprecated-ota:__subpackages__",
         "//external/puffin:__subpackages__",
         "//system/update_engine:__subpackages__",
         "//system/core/fs_mgr/libsnapshot:__subpackages__",
