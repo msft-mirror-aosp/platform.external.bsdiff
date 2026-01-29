@@ -9,9 +9,7 @@
 #include <limits>
 #include <vector>
 
-#include "bsdiff/brotli_decompressor.h"
-#include "bsdiff/bspatch.h"
-#include "bsdiff/bz2_decompressor.h"
+#include <bsdiff/decompressor_interface.h>
 #include "bsdiff/constants.h"
 #include "bsdiff/logging.h"
 #include "bsdiff/utils.h"
@@ -83,35 +81,21 @@ bool BsdiffPatchReader::Init(const uint8_t* patch_data, size_t patch_size) {
   }
   new_file_size_ = signed_newsize;
 
-  ctrl_stream_ = CreateDecompressor(compression_type[0]);
-  diff_stream_ = CreateDecompressor(compression_type[1]);
-  extra_stream_ = CreateDecompressor(compression_type[2]);
+  size_t offset = 32;
+  ctrl_stream_ = CreateDecompressor(
+      compression_type[0], const_cast<uint8_t*>(patch_data) + offset, ctrl_len);
+  offset += ctrl_len;
+  diff_stream_ = CreateDecompressor(
+      compression_type[1], const_cast<uint8_t*>(patch_data) + offset, diff_len);
+  offset += diff_len;
+  extra_stream_ = CreateDecompressor(compression_type[2],
+                                     const_cast<uint8_t*>(patch_data) + offset,
+                                     patch_size - offset);
   if (!(ctrl_stream_ && diff_stream_ && extra_stream_)) {
     LOG(ERROR) << "uninitialized decompressor stream";
     return false;
   }
 
-  size_t offset = 32;
-  if (!ctrl_stream_->SetInputData(const_cast<uint8_t*>(patch_data) + offset,
-                                  ctrl_len)) {
-    LOG(ERROR) << "Failed to init ctrl stream, ctrl_len: " << ctrl_len;
-    return false;
-  }
-
-  offset += ctrl_len;
-  if (!diff_stream_->SetInputData(const_cast<uint8_t*>(patch_data) + offset,
-                                  diff_len)) {
-    LOG(ERROR) << "Failed to init ctrl stream, diff_len: " << diff_len;
-    return false;
-  }
-
-  offset += diff_len;
-  if (!extra_stream_->SetInputData(const_cast<uint8_t*>(patch_data) + offset,
-                                   patch_size - offset)) {
-    LOG(ERROR) << "Failed to init extra stream, extra_offset: " << offset
-               << ", patch_size: " << patch_size;
-    return false;
-  }
   return true;
 }
 
