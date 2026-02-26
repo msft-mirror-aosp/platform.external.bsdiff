@@ -105,9 +105,7 @@ bool BrotliMemoryDecompressor::SetInputData(const uint8_t* input_data,
 }
 
 
-BrotliFileDecompressor::~BrotliFileDecompressor() {
-  close(fd_);
-}
+BrotliFileDecompressor::~BrotliFileDecompressor() = default;
 
 bool BrotliFileDecompressor::SetInputFile(int fd, off_t offset, size_t size) {
   fd_ = fd;
