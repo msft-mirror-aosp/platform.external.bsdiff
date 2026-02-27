@@ -47,7 +47,7 @@ class BrotliMemoryDecompressor final : public BrotliDecompressorCommon {
 
 class BrotliFileDecompressor : public BrotliDecompressorCommon {
  public:
-  BrotliFileDecompressor() : input_buffer_(64 * 1024){}
+  BrotliFileDecompressor() : fd_(-1), input_buffer_(64 * 1024) {}
   ~BrotliFileDecompressor() override;
 
   bool SetInputFile(int fd, off_t offset, size_t size);
